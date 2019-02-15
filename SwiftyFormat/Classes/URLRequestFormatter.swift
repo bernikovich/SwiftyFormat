@@ -13,7 +13,7 @@ class URLRequestFormatter: Formatter {
     return "\(request.httpMethod ?? URLRequestFormatter.defaultHTTPMethod) \(request.url?.absoluteString ?? "")"
   }
   
-  static func curlCommand(from request: URLRequest) -> String {
+  static func curlCommand(from request: URLRequest, shouldPrettyPrint: Bool = true) -> String {
     var command = "curl"
     
     command.appendCommandLineArgument("-X \(request.httpMethod ?? defaultHTTPMethod)")
@@ -26,7 +26,7 @@ class URLRequestFormatter: Formatter {
       httpBodyString = httpBodyString.replacingOccurrences(of: "`", with: "\\`")
       httpBodyString = httpBodyString.replacingOccurrences(of: "\"", with: "\\\"")
       httpBodyString = httpBodyString.replacingOccurrences(of: "$", with: "\\$")
-      command.appendCommandLineArgument("-d \"\(httpBodyString)\"")
+      command.appendCommandLineArgument("-d \"\(httpBodyString)\"", shouldPrettyPrint: shouldPrettyPrint)
     }
     
     if request.allHTTPHeaderFields?["Accept-Encoding"]?.contains("gzip") ?? false {
@@ -36,15 +36,16 @@ class URLRequestFormatter: Formatter {
     if let url = request.url {
       if let cookies = HTTPCookieStorage.shared.cookies(for: url), !cookies.isEmpty {
         let cookieString = cookies.map({ "\($0.name)=\($0.value);" }).joined()
-        command.appendCommandLineArgument("--cookie \"\(cookieString)\"")
+        command.appendCommandLineArgument("--cookie \"\(cookieString)\"", shouldPrettyPrint: shouldPrettyPrint)
       }
     }
     
     request.allHTTPHeaderFields?.forEach {
-      command.appendCommandLineArgument("-H '\($0.key): \($0.value.replacingOccurrences(of: "\\", with: "\\\\"))'")
+      command.appendCommandLineArgument("-H '\($0.key): \($0.value.replacingOccurrences(of: "\\", with: "\\\\"))'", shouldPrettyPrint: shouldPrettyPrint)
     }
     
-    command.appendCommandLineArgument(request.url?.absoluteString ?? "")
+    command.appendCommandLineArgument(request.url?.absoluteString ?? "", shouldPrettyPrint: shouldPrettyPrint)
+
     return command
   }
   
@@ -91,8 +92,14 @@ class HTTPURLResponseFormatter: Formatter {
 
 private extension String {
   
-  mutating func appendCommandLineArgument(_ argument: String) {
-    append(" \(argument.trimmingCharacters(in: .whitespaces))")
+  mutating func appendCommandLineArgument(_ argument: String, shouldPrettyPrint: Bool = false) {
+    if shouldPrettyPrint {
+      append(" \\\n")
+    } else {
+      append(" ")
+    }
+    
+    append(argument.trimmingCharacters(in: .whitespaces))
   }
   
 }

@@ -22,6 +22,8 @@ class URLRequestFormatterTests: XCTestCase {
     }
   }
   
+  // URLRequest description.
+  
   func testURLRequestDescriptionURL() {
     let request = URLRequest(url: url)
     let string = formatter.string(from: request)
@@ -36,20 +38,32 @@ class URLRequestFormatterTests: XCTestCase {
     XCTAssert(string.contains(method), "URLRequest description should contain url")
   }
   
-  func testCURLCompression() {
+  // cURL
+  
+  func testCURLURL() {
+    let request = URLRequest(url: url)
+    let command = URLRequestFormatter.curlCommand(from: request)
+    XCTAssert(command.contains(url.absoluteString), "curl should contain url")
+  }
+  
+  func testCURLMethod() {
     let method = "POST"
     var request = URLRequest(url: url)
     request.httpMethod = method
+    let string = formatter.string(from: request)
+    XCTAssert(string.contains(method), "URLRequest description should contain url")
+  }
+  
+  func testCURLCompression() {
+    var request = URLRequest(url: url)
     request.setValue("gzip, deflate", forHTTPHeaderField: "Accept-Encoding")
     let command = URLRequestFormatter.curlCommand(from: request)
     XCTAssert(command.contains("--compressed"), "curl should have --compressed parameter when Accept-Encoding contains gzip")
   }
   
-  func testJSONBody() {
-    let method = "POST"
+  func testCURLJSONBody() {
     var request = URLRequest(url: url)
-    request.httpMethod = method
-    request.setValue("gzip, deflate", forHTTPHeaderField: "Accept-Encoding")
+    request.httpMethod = "POST"
     request.httpBody = try? JSONSerialization.data(withJSONObject: ["some": "value"], options: [])
     let command = URLRequestFormatter.curlCommand(from: request)
     XCTAssert(command.contains("-d \"{\\\"some\\\":\\\"value\\\"}\""), "curl encodes json incorrectly")
